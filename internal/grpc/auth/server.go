@@ -1,7 +1,10 @@
 package auth
 
 import (
+	"auth_service/internal/services/auth"
+	"auth_service/internal/storage"
 	"context"
+	"errors"
 
 	ssov1 "github.com/Zalozhnyy/auth_proto/gen/go/sso"
 	"google.golang.org/grpc"
@@ -23,7 +26,6 @@ type Auth interface {
 		email string,
 		password string,
 	) (userID int64, err error)
-	IsAdmin(ctx context.Context, userID int64) (bool, error)
 }
 
 type serverAPI struct {
@@ -54,7 +56,9 @@ func (s *serverAPI) Login(
 
 	token, err := s.auth.Login(ctx, req.GetEmail(), req.GetPassword(), int(req.GetAppId()))
 	if err != nil {
-		// TODO ..
+		if errors.Is(err, auth.ErrInvalidCredentials) {
+			return nil, status.Error(codes.InvalidArgument, "invalid email or password")
+		}
 		return nil, status.Error(codes.Internal, "internal error")
 	}
 
@@ -79,8 +83,10 @@ func (s *serverAPI) Register(
 
 	userID, err := s.auth.RegisterNewUser(ctx, req.GetEmail(), req.GetPassword())
 	if err != nil {
-		// TODO ..
-		return nil, status.Error(codes.InvalidArgument, "internal error")
+		if errors.Is(err, storage.ErrUserExists) {
+			return nil, status.Error(codes.AlreadyExists, "user alredy exists")
+		}
+		return nil, status.Error(codes.Internal, "failed to create user")
 	}
 
 	return &ssov1.RegisterResponse{

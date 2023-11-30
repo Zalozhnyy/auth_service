@@ -2,8 +2,11 @@ package app
 
 import (
 	grpcapp "auth_service/internal/app/grpc"
+	authService "auth_service/internal/services/auth"
+	mapstorage "auth_service/internal/storage/map_storage"
 	"log/slog"
 	"time"
+
 )
 
 type App struct {
@@ -17,10 +20,17 @@ func New(
 	tokenTTL time.Duration,
 ) *App {
 
-	// TODO init storage
-	// TODO init auth seervice
+	storage := mapstorage.New()
 
-	grpcApp := grpcapp.New(log, port)
+	authService := authService.New(
+		log,
+		storage,
+		storage,
+		storage,
+		tokenTTL,
+	)
+
+	grpcApp := grpcapp.New(log, port, authService)
 
 	return &App{
 		GRPCSrv: grpcApp,

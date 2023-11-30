@@ -5,6 +5,8 @@ import (
 	"auth_service/internal/config"
 	"log/slog"
 	"os"
+	"os/signal"
+	"syscall"
 )
 
 const (
@@ -26,9 +28,17 @@ func main() {
 		cfg.TokenTTL,
 	)
 
-	application.GRPCSrv.MustRun()
+	go application.GRPCSrv.MustRun()
 
-	// TODO init grpc
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, syscall.SIGTERM, syscall.SIGINT)
+
+	code := <-stop
+
+	log.Info("starting sopping app", slog.String("signal", code.String()))
+
+	application.GRPCSrv.Stop()
+	log.Info("Application stopped")
 
 }
 
