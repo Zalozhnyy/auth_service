@@ -3,3 +3,6 @@ storage_path: "./storage/sso.db"
 grpc:
   port: 44044
   timeout: 10h
+kafka:
+  host: localhost:9092
+  topic: notifications

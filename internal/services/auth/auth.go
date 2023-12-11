@@ -3,6 +3,7 @@ package auth
 import (
 	"auth_service/internal/domain/models"
 	"auth_service/internal/lib/jwt"
+	"auth_service/internal/services/notifier"
 	"auth_service/internal/storage"
 	"context"
 	"errors"
@@ -23,6 +24,7 @@ type Auth struct {
 	usrProvider UserProvider
 	appProvider AppProvider
 	tokenTTL    time.Duration
+	notifier    notifier.Notifier
 }
 
 type UserSaver interface {
@@ -43,6 +45,7 @@ func New(
 	userProvider UserProvider,
 	appProvider AppProvider,
 	tokenTTL time.Duration,
+	notifier notifier.Notifier,
 ) *Auth {
 	return &Auth{
 		usrSaver:    userSaver,
@@ -50,6 +53,7 @@ func New(
 		log:         log,
 		appProvider: appProvider,
 		tokenTTL:    tokenTTL,
+		notifier:    notifier,
 	}
 }
 
@@ -95,6 +99,10 @@ func (a *Auth) Login(
 		return "", fmt.Errorf("%s: %w", op, err)
 	}
 
+	if err := a.notifier.Send(&user); err != nil {
+		a.log.Error("failed to send message to notifier", slog.String("err", err.Error()))
+	}
+
 	return token, nil
 
 }
@@ -124,6 +132,14 @@ func (a *Auth) RegisterNewUser(
 	}
 
 	log.Info("register", slog.String("hash", string(passHash)))
+
+	user := models.User{
+		ID:    id,
+		Email: email,
+	}
+	if err := a.notifier.Send(&user); err != nil {
+		a.log.Error("failed to send message to notifier", slog.String("err", err.Error()))
+	}
 
 	return id, nil
 }

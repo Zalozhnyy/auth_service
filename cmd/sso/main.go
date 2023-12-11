@@ -26,6 +26,7 @@ func main() {
 		cfg.GRPC.Port,
 		cfg.StoragePath,
 		cfg.TokenTTL,
+		cfg.Kafka,
 	)
 
 	go application.GRPCSrv.MustRun()
